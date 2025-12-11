@@ -1,29 +1,215 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Docker Manager</title>
-    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link rel="stylesheet" href="animations.css">
 </head>
-<body>
-    <h1>Gestionnaire de Conteneurs Docker</h1>
+<body class="bg-gradient-to-br from-slate-900 to-slate-800 text-white min-h-screen">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header avec User Info -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <svg class="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                    </svg>
+                    <div>
+                        <h1 class="text-4xl font-bold">Gestionnaire Docker</h1>
+                        <p class="text-slate-400">Gérez vos conteneurs, images et logs Docker en temps réel</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-slate-300 text-sm">👤 <span id="userEmail">Chargement...</span></p>
+                    <button id="logoutBtn" class="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+        </div>
 
+        <!-- Onglets de navigation -->
+        <div class="flex gap-2 mb-6 flex-wrap border-b border-slate-600">
+            <button class="nav-tab active px-6 py-3 rounded-t-lg bg-blue-600 hover:bg-blue-700 font-medium transition" data-tab="containers">
+                📦 Conteneurs
+            </button>
+            <button class="nav-tab px-6 py-3 rounded-t-lg bg-slate-700 hover:bg-slate-600 font-medium transition" data-tab="images">
+                🖼️ Images
+            </button>
+            <button class="nav-tab px-6 py-3 rounded-t-lg bg-slate-700 hover:bg-slate-600 font-medium transition" data-tab="logs">
+                📋 Logs & Stats
+            </button>
+            <button class="nav-tab px-6 py-3 rounded-t-lg bg-slate-700 hover:bg-slate-600 font-medium transition" data-tab="audit">
+                🔍 Audit
+            </button>
+        </div>
 
+        <!-- ========== TAB 1: CONTENEURS ========== -->
+        <div id="containers-tab" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Formulaire de création -->
+                <div class="lg:col-span-1">
+                    <div class="bg-slate-700 rounded-lg p-6 shadow-xl">
+                        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Créer un conteneur
+                        </h2>
+                        <form id="create-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1 text-slate-300">Image Docker</label>
+                                <select name="image" required class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                                    <option value="">-- Choisir une image --</option>
+                                    <option value="nginx">nginx</option>
+                                    <option value="alpine">alpine</option>
+                                    <option value="ubuntu">ubuntu</option>
+                                    <option value="httpd">httpd</option>
+                                    <option value="postgres">postgres</option>
+                                    <option value="redis">redis</option>
+                                    <option value="mysql">mysql</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1 text-slate-300">Nom (optionnel)</label>
+                                <input type="text" name="name" placeholder="mon-conteneur" class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1 text-slate-300">Ports (ex: 8080:80)</label>
+                                <input type="text" name="ports" placeholder="8080:80,3000:3000" class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" title="Format: hostPort:containerPort">
+                            </div>
+                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 rounded px-4 py-2 font-medium transition flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Créer
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
-    <h2>Créer un nouveau conteneur</h2>
-    <form id="create-form">
-        <select name="image" required>
-            <option value="">-- Choisir une image --</option>
-            <option value="nginx">nginx</option>
-            <option value="alpine">alpine</option>
-            <option value="ubuntu">ubuntu</option>
-            <option value="httpd">httpd</option>
-        </select>
-        <input type="text" name="name" placeholder="Nom du conteneur (optionnel)">
-        <button type="submit">Créer et Lancer</button>
-    </form>
+                <!-- Liste des conteneurs -->
+                <div class="lg:col-span-2">
+                    <!-- Filtres -->
+                    <div class="bg-slate-700 rounded-lg p-4 mb-4 shadow-xl">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-slate-300">Rechercher</label>
+                                <input type="text" id="search-input" placeholder="Nom ou image..." class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-slate-300">Filtre</label>
+                                <select id="status-filter" class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                                    <option value="all">Tous</option>
+                                    <option value="running">En cours</option>
+                                    <option value="exited">Arrêtés</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-4 flex-wrap">
+                            <button class="filter-tab active px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-medium transition text-sm" data-filter="all">Tous</button>
+                            <button class="filter-tab px-4 py-2 rounded bg-slate-600 hover:bg-slate-500 font-medium transition text-sm" data-filter="running"><span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>En cours</button>
+                            <button class="filter-tab px-4 py-2 rounded bg-slate-600 hover:bg-slate-500 font-medium transition text-sm" data-filter="exited"><span class="inline-block w-2 h-2 bg-red-400 rounded-full mr-2"></span>Arrêtés</button>
+                        </div>
+                    </div>
 
-    <div id="container-list"></div>
+                    <!-- Conteneurs -->
+                    <div id="container-list" class="space-y-3">
+                        <div class="text-center text-slate-400 py-8">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TAB 2: IMAGES ========== -->
+        <div id="images-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Pull Image -->
+                <div class="bg-slate-700 rounded-lg p-6 shadow-xl">
+                    <h2 class="text-xl font-bold mb-4">Tirer une Image</h2>
+                    <form id="pull-form" class="space-y-4">
+                        <input type="text" placeholder="nginx:latest" id="pull-image" class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 rounded px-4 py-2 font-medium transition">Pull</button>
+                    </form>
+                </div>
+
+                <!-- Liste des images -->
+                <div class="lg:col-span-3">
+                    <div id="images-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="text-center text-slate-400 py-8">Chargement des images...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TAB 3: LOGS & STATS ========== -->
+        <div id="logs-tab" class="tab-content hidden">
+            <div class="space-y-6">
+                <!-- Sélectionner un conteneur -->
+                <div class="bg-slate-700 rounded-lg p-6 shadow-xl">
+                    <label class="block text-sm font-medium mb-2 text-slate-300">Sélectionner un conteneur</label>
+                    <select id="logs-container-select" class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                        <option value="">-- Choisir un conteneur --</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Stats -->
+                    <div class="bg-slate-700 rounded-lg p-6 shadow-xl">
+                        <h3 class="text-lg font-bold mb-4">Stats CPU/RAM</h3>
+                        <div id="stats-container" class="space-y-4">
+                            <div class="text-slate-400">Sélectionner un conteneur</div>
+                        </div>
+                    </div>
+
+                    <!-- Logs -->
+                    <div class="bg-slate-700 rounded-lg p-6 shadow-xl">
+                        <h3 class="text-lg font-bold mb-4">Logs (dernières 100 lignes)</h3>
+                        <div id="logs-container" class="bg-slate-900 rounded p-3 max-h-96 overflow-y-auto font-mono text-sm text-green-400">
+                            <div class="text-slate-400">Sélectionner un conteneur</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TAB 4: AUDIT ========== -->
+        <div id="audit-tab" class="tab-content hidden">
+            <div class="bg-slate-700 rounded-lg p-6 shadow-xl">
+                <h2 class="text-xl font-bold mb-4">📋 Logs d'Actions (Audit)</h2>
+                <div class="flex gap-4 mb-6">
+                    <button id="loadAuditBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition">
+                        🔄 Charger les logs
+                    </button>
+                </div>
+                <div id="audit-container" class="bg-slate-900 rounded-lg overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-slate-300">Date</th>
+                                <th class="px-4 py-3 text-left text-slate-300">Utilisateur</th>
+                                <th class="px-4 py-3 text-left text-slate-300">Action</th>
+                                <th class="px-4 py-3 text-left text-slate-300">Conteneur/Image</th>
+                                <th class="px-4 py-3 text-left text-slate-300">IP</th>
+                                <th class="px-4 py-3 text-left text-slate-300">Détails</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-list" class="divide-y divide-slate-700">
+                            <tr>
+                                <td colspan="6" class="px-4 py-3 text-slate-400 text-center">Aucun log</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>
 
     <script src="script.js"></script>
 </body>
