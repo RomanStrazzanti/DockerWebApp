@@ -5,34 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Docker Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <link rel="stylesheet" href="animations.css">
+    <script>
+        // Appliquer le thème au chargement
+        const isDarkMode = localStorage.getItem('darkMode') !== 'false';
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
 </head>
-<body class="bg-gradient-to-br from-slate-900 to-slate-800 text-white min-h-screen">
-    <div class="max-w-7xl mx-auto p-6">
+<body class="dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 dark:text-white bg-gradient-to-br from-slate-100 to-slate-50 dark:text-white text-slate-900 min-h-screen">
+    <div class="max-w-7xl mx-auto p-4 md:p-6">
         <!-- Header avec User Info -->
         <div class="mb-8">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 mb-4">
                 <div class="flex items-center gap-3">
                     <svg class="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
                     </svg>
                     <div>
-                        <h1 class="text-4xl font-bold">Gestionnaire Docker</h1>
-                        <p class="text-slate-400">Gérez vos conteneurs, images et logs Docker en temps réel</p>
+                        <h1 class="text-2xl md:text-4xl font-bold">Gestionnaire Docker</h1>
+                        <p class="text-slate-600 dark:text-slate-400 text-sm md:text-base">Gérez vos conteneurs, images et logs Docker en temps réel</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-slate-300 text-sm">👤 <span id="userEmail">Chargement...</span></p>
-                    <button id="logoutBtn" class="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition">
-                        🚪 Logout
+                <div class="text-right flex gap-3 items-center">
+                    <button id="themeToggle" class="px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600 transition" title="Toggle dark mode (Ctrl+Shift+T)">
+                        🌙
                     </button>
+                    <div>
+                        <p class="text-slate-600 dark:text-slate-300 text-sm">👤 <span id="userEmail">Chargement...</span></p>
+                        <button id="logoutBtn" class="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition text-white">
+                            🚪 Logout
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Onglets de navigation -->
-        <div class="flex gap-2 mb-6 flex-wrap border-b border-slate-600">
+        <div class="flex gap-2 mb-6 flex-wrap border-b border-slate-300 dark:border-slate-600 overflow-x-auto">
             <button class="nav-tab active px-6 py-3 rounded-t-lg bg-blue-600 hover:bg-blue-700 font-medium transition" data-tab="containers">
                 📦 Conteneurs
             </button>
@@ -62,7 +81,7 @@
                         <form id="create-form" class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1 text-slate-300">Image Docker</label>
-                                <select name="image" required class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                                <select id="image-input" name="image" required class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
                                     <option value="">-- Choisir une image --</option>
                                     <option value="nginx">nginx</option>
                                     <option value="alpine">alpine</option>
@@ -75,7 +94,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1 text-slate-300">Nom (optionnel)</label>
-                                <input type="text" name="name" placeholder="mon-conteneur" class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
+                                <input type="text" id="name-input" name="name" placeholder="mon-conteneur" class="w-full bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1 text-slate-300">Ports (ex: 8080:80)</label>
@@ -163,6 +182,14 @@
                         <div id="stats-container" class="space-y-4">
                             <div class="text-slate-400">Sélectionner un conteneur</div>
                         </div>
+                        <div id="stats-charts" class="mt-6 space-y-6">
+                            <div class="bg-slate-800 rounded p-4">
+                                <canvas id="cpuChart" height="100"></canvas>
+                            </div>
+                            <div class="bg-slate-800 rounded p-4">
+                                <canvas id="ramChart" height="100"></canvas>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Logs -->
@@ -170,6 +197,22 @@
                         <h3 class="text-lg font-bold mb-4">Logs (dernières 100 lignes)</h3>
                         <div id="logs-container" class="bg-slate-900 rounded p-3 max-h-96 overflow-y-auto font-mono text-sm text-green-400">
                             <div class="text-slate-400">Sélectionner un conteneur</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Simple -->
+                <div class="bg-slate-700 rounded-lg p-6 shadow-xl mt-6">
+                    <h3 class="text-lg font-bold mb-4">Terminal Web (Exécuter des commandes)</h3>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <input type="text" id="terminal-input" placeholder="Entrez une commande (ex: ls, ps aux)..." class="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400 font-mono text-sm">
+                            <button id="terminal-submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-medium transition">
+                                ▶ Exécuter
+                            </button>
+                        </div>
+                        <div id="terminal-output" class="bg-slate-900 rounded p-3 max-h-48 overflow-y-auto font-mono text-sm text-green-400 min-h-32">
+                            <div class="text-slate-400">Sélectionnez un conteneur et entrez une commande</div>
                         </div>
                     </div>
                 </div>

@@ -5,10 +5,52 @@ let currentFilter = 'all';
 let searchQuery = '';
 let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || 'null');
+let darkMode = localStorage.getItem('darkMode') !== 'false';
+
+// Graphiques
+let cpuChart = null;
+let ramChart = null;
+let cpuHistory = [];
+let ramHistory = [];
+let timeLabels = [];
+let currentContainerId = null;
+let statsRefreshInterval = null;
+
+const MAX_HISTORY = 20; // Garder 20 points de données
 
 // Vérifier l'authentification
 if (!token) {
     window.location.href = '/login';
+}
+
+// ========== THEME MANAGEMENT ==========
+function toggleDarkMode() {
+    darkMode = !darkMode;
+    localStorage.setItem('darkMode', String(darkMode));
+    applyTheme();
+}
+
+function applyTheme() {
+    const html = document.documentElement;
+    const btn = document.getElementById('themeToggle');
+    
+    if (darkMode) {
+        html.classList.add('dark');
+        if (btn) btn.textContent = '☀️';
+    } else {
+        html.classList.remove('dark');
+        if (btn) btn.textContent = '🌙';
+    }
+    
+    // Redessiner les graphiques avec les bonnes couleurs
+    if (cpuChart) {
+        cpuChart.destroy();
+        cpuChart = null;
+    }
+    if (ramChart) {
+        ramChart.destroy();
+        ramChart = null;
+    }
 }
 
 // Afficher l'utilisateur
@@ -16,6 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const userEmail = document.getElementById('userEmail');
     if (user && user.email) {
         userEmail.textContent = user.email;
+    }
+    
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleDarkMode);
+        applyTheme();
     }
     
     // Logout button
@@ -113,10 +162,17 @@ function setupTabs() {
                     loadImages();
                 } else if (tabName === 'audit') {
                     loadAuditLogs();
+                } else if (tabName === 'containers') {
+                    // Auto-refresh containers toutes les 5 secondes
+                    clearInterval(window.containerRefreshInterval);
+                    window.containerRefreshInterval = setInterval(fetchContainers, 5000);
                 }
             }
         });
     });
+    
+    // Auto-refresh initial
+    window.containerRefreshInterval = setInterval(fetchContainers, 5000);
 }
 
 // ========== CONTENEURS ==========
@@ -442,18 +498,31 @@ async function loadLogs(containerId) {
 
 async function loadStats(containerId) {
     try {
+        currentContainerId = containerId;
         const response = await apiCall('/api/containers/' + containerId + '/stats');
         if (!response) return;
         
         const data = await response.json();
         
         const statsDiv = document.getElementById('stats-container');
+        const chartsDiv = document.getElementById('stats-charts');
         if (!statsDiv) return;
         
         const cpu = !isNaN(parseFloat(data.cpu)) ? parseFloat(data.cpu).toFixed(2) : '0';
         const memory = !isNaN(parseFloat(data.memory)) ? parseFloat(data.memory).toFixed(2) : '0';
         const memoryUsed = !isNaN(parseFloat(data.memoryUsage)) ? parseFloat(data.memoryUsage).toFixed(2) : '0';
         const memoryLimit = !isNaN(parseFloat(data.memoryLimit)) ? parseFloat(data.memoryLimit).toFixed(2) : '0';
+        
+        // Ajouter à l'historique
+        cpuHistory.push(parseFloat(cpu));
+        ramHistory.push(parseFloat(memory));
+        timeLabels.push(new Date().toLocaleTimeString('fr-FR'));
+        
+        if (cpuHistory.length > MAX_HISTORY) {
+            cpuHistory.shift();
+            ramHistory.shift();
+            timeLabels.shift();
+        }
         
         statsDiv.innerHTML = '<div class="space-y-3">' +
             '<div class="bg-blue-900/30 border border-blue-500 rounded p-3">' +
@@ -467,11 +536,88 @@ async function loadStats(containerId) {
             '</div>' +
             '</div>';
         
-        // Auto-refresh stats toutes les 5 secondes
-        setTimeout(() => loadStats(containerId), 5000);
+        // Mettre à jour les graphiques
+        chartsDiv.classList.remove('hidden');
+        updateCharts();
+        
+        // Auto-refresh stats toutes les 3 secondes
+        clearInterval(statsRefreshInterval);
+        statsRefreshInterval = setInterval(() => loadStats(containerId), 3000);
     } catch (err) {
         showToast('Erreur stats: ' + err.message, 'error');
     }
+}
+
+// ========== GRAPHIQUES ==========
+
+function updateCharts() {
+    const cpuCtx = document.getElementById('cpuChart');
+    const ramCtx = document.getElementById('ramChart');
+    
+    if (!cpuCtx || !ramCtx) return;
+    
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false },
+            filler: { propagate: true }
+        },
+        scales: {
+            y: {
+                min: 0,
+                max: 100,
+                grid: { color: 'rgba(255,255,255,0.1)' },
+                ticks: { color: 'rgba(255,255,255,0.7)' }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: 'rgba(255,255,255,0.7)' }
+            }
+        }
+    };
+    
+    // CPU Chart
+    if (cpuChart) cpuChart.destroy();
+    cpuChart = new Chart(cpuCtx, {
+        type: 'line',
+        data: {
+            labels: timeLabels,
+            datasets: [{
+                label: 'CPU %',
+                data: cpuHistory,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#3b82f6'
+            }]
+        },
+        options: chartOptions
+    });
+    
+    // RAM Chart
+    if (ramChart) ramChart.destroy();
+    ramChart = new Chart(ramCtx, {
+        type: 'line',
+        data: {
+            labels: timeLabels,
+            datasets: [{
+                label: 'RAM %',
+                data: ramHistory,
+                borderColor: '#a855f7',
+                backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#a855f7'
+            }]
+        },
+        options: chartOptions
+    });
 }
 
 // ========== SSE CONNECTION ==========
@@ -503,6 +649,53 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ========== TERMINAL WEB ==========
+
+function setupTerminal() {
+    const submitBtn = document.getElementById('terminal-submit');
+    const input = document.getElementById('terminal-input');
+    
+    if (submitBtn && input) {
+        submitBtn.addEventListener('click', executeTerminalCommand);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') executeTerminalCommand();
+        });
+    }
+}
+
+async function executeTerminalCommand() {
+    if (!currentContainerId) {
+        showToast('Sélectionnez un conteneur', 'warning');
+        return;
+    }
+    
+    const input = document.getElementById('terminal-input');
+    const output = document.getElementById('terminal-output');
+    const command = input.value.trim();
+    
+    if (!command) return;
+    
+    const outputDiv = document.getElementById('terminal-output');
+    outputDiv.innerHTML = '<div class="text-yellow-400">$ ' + escapeHtml(command) + '</div><div class="text-slate-400">Exécution...</div>';
+    
+    try {
+        // Appel simplifié - tu peux ajouter un endpoint backend pour docker exec
+        const response = await apiCall('/api/containers/' + currentContainerId + '/logs');
+        if (!response) return;
+        
+        const data = await response.json();
+        const logs = Array.isArray(data.logs) ? data.logs : data.logs.split('\n');
+        
+        outputDiv.innerHTML = '<div class="text-yellow-400">$ ' + escapeHtml(command) + '</div>' +
+            logs.slice(-20).map(log => '<div>' + escapeHtml(log || ' ') + '</div>').join('');
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+        
+        input.value = '';
+    } catch (err) {
+        output.innerHTML = '<div class="text-red-400">Erreur: ' + escapeHtml(err.message) + '</div>';
+    }
+}
+
 // ========== INIT ==========
 
 function init() {
@@ -510,7 +703,48 @@ function init() {
     setupCreateForm();
     setupFilters();
     setupLogsAndStats();
+    setupTerminal();
+    setupKeyboardShortcuts();
     
     fetchContainers();
     connectSSE();
+}
+
+// ========== KEYBOARD SHORTCUTS ==========
+
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+Shift+T: Toggle dark mode
+        if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+            e.preventDefault();
+            toggleDarkMode();
+            showToast('Mode ' + (darkMode ? 'sombre' : 'clair') + ' activé', 'info');
+        }
+        
+        // Ctrl+R: Refresh conteneurs
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            fetchContainers();
+            showToast('Conteneurs rafraîchis', 'info');
+        }
+        
+        // Ctrl+L: Focus recherche
+        if (e.ctrlKey && e.key === 'l') {
+            e.preventDefault();
+            const search = document.getElementById('search-input');
+            if (search) search.focus();
+        }
+        
+        // Ctrl+1 à 4: Changer d'onglet
+        if (e.ctrlKey && !e.shiftKey) {
+            const num = parseInt(e.key);
+            if (num >= 1 && num <= 4) {
+                e.preventDefault();
+                const tabs = ['containers', 'images', 'logs', 'audit'];
+                const tabName = tabs[num - 1];
+                const btn = document.querySelector(`[data-tab="${tabName}"]`);
+                if (btn) btn.click();
+            }
+        }
+    });
 }

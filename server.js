@@ -76,7 +76,7 @@ app.post('/api/auth/register', async (req, res) => {
         const { email, password } = req.body;
         if (!email || !password) return res.status(400).json({ error: 'Email et password requis' });
 
-        const { data, error } = await supabase.auth.signUpWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) return res.status(400).json({ error: error.message });
 
         res.json({ success: true, user: data.user });
