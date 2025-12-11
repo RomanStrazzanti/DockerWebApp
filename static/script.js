@@ -172,7 +172,7 @@ function renderContainers() {
 }
 
 function populateContainerSelect() {
-    const select = document.getElementById('container-select');
+    const select = document.getElementById('logs-container-select');
     if (!select) return;
     
     select.innerHTML = '<option value="">Sélectionner un conteneur...</option>' +
@@ -410,7 +410,7 @@ async function loadAuditLogs() {
 // ========== LOGS & STATS ==========
 
 function setupLogsAndStats() {
-    const select = document.getElementById('container-select');
+    const select = document.getElementById('logs-container-select');
     if (select) {
         select.addEventListener('change', (e) => {
             const id = e.target.value;

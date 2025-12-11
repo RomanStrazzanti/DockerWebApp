@@ -1,5 +1,6 @@
 ﻿const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const Docker = require('dockerode');
 require('dotenv').config();
@@ -52,10 +53,24 @@ async function authMiddleware(req, res, next) {
     }
 }
 
-// Routes publiques
-app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'static', 'login.html')));
-app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'static', 'register.html')));
+// Routes publiques - Serve HTML files
+app.get('/login', (req, res) => {
+    fs.readFile(path.join(__dirname, 'static', 'login.html'), 'utf8', (err, data) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.setHeader('Content-Type', 'text/html');
+        res.send(data);
+    });
+});
 
+app.get('/register', (req, res) => {
+    fs.readFile(path.join(__dirname, 'static', 'register.html'), 'utf8', (err, data) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.setHeader('Content-Type', 'text/html');
+        res.send(data);
+    });
+});
+
+// Auth routes
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -90,7 +105,7 @@ app.post('/api/auth/logout', authMiddleware, async (req, res) => {
     res.json({ success: true });
 });
 
-// Routes protégées - Conteneurs
+// Container routes
 app.get('/api/containers', authMiddleware, async (req, res) => {
     try {
         const containers = await docker.listContainers({ all: true });
@@ -179,7 +194,7 @@ app.delete('/api/containers/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Routes protégées - Logs
+// Logs route
 app.get('/api/containers/:id/logs', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
@@ -191,7 +206,7 @@ app.get('/api/containers/:id/logs', authMiddleware, async (req, res) => {
     }
 });
 
-// Routes protégées - Stats
+// Stats route
 app.get('/api/containers/:id/stats', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
@@ -217,7 +232,7 @@ app.get('/api/containers/:id/stats', authMiddleware, async (req, res) => {
     }
 });
 
-// Routes protégées - Images
+// Images routes
 app.get('/api/images', authMiddleware, async (req, res) => {
     try {
         const images = await docker.listImages();
@@ -245,7 +260,7 @@ app.delete('/api/images/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Routes protégées - Audit Logs
+// Audit logs route
 app.get('/api/logs', authMiddleware, async (req, res) => {
     try {
         const { data, error } = await supabaseAdmin.from('logs').select('*').order('created_at', { ascending: false }).limit(100);
@@ -256,7 +271,7 @@ app.get('/api/logs', authMiddleware, async (req, res) => {
     }
 });
 
-// SSE
+// SSE events route
 app.get('/api/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -275,7 +290,11 @@ app.get('/api/events', (req, res) => {
 
 // Serve index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'static', 'index.html'));
+    fs.readFile(path.join(__dirname, 'static', 'index.html'), 'utf8', (err, data) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.setHeader('Content-Type', 'text/html');
+        res.send(data);
+    });
 });
 
 const PORT = process.env.PORT || 3000;
