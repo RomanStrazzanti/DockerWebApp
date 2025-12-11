@@ -1,0 +1,132 @@
+/* Reset basique */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f6fa;
+    color: #2f3640;
+    padding: 20px;
+}
+
+/* Header */
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #40739e;
+}
+
+/* Conteneur des cartes */
+#container-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+/* Carte conteneur */
+.container-card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    width: 250px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.container-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.container-card strong {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 5px;
+    color: #40739e;
+}
+
+.container-card em {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #718093;
+}
+
+/* Boutons */
+button {
+    margin: 5px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+}
+
+button:disabled {
+    background-color: #dcdde1;
+    color: #7f8fa6;
+    cursor: not-allowed;
+}
+
+button:nth-child(1) {
+    background-color: #44bd32;
+    color: white;
+}
+
+button:nth-child(1):hover:not(:disabled) {
+    background-color: #4cd137;
+}
+
+button:nth-child(2) {
+    background-color: #e1b12c;
+    color: white;
+}
+
+button:nth-child(2):hover:not(:disabled) {
+    background-color: #fbc531;
+}
+
+button:nth-child(3) {
+    background-color: #e84118;
+    color: white;
+}
+
+button:nth-child(3):hover:not(:disabled) {
+    background-color: #ff4d4d;
+}
+
+/* Formulaire création */
+form {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+select, input {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #dcdde1;
+    font-size: 14px;
+}
+
+select {
+    min-width: 160px;
+}
+
+button[type="submit"] {
+    background-color: #40739e;
+    color: white;
+    padding: 8px 15px;
+}
+
+button[type="submit"]:hover {
+    background-color: #487eb0;
+}

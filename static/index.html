@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Docker Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Gestionnaire de Conteneurs Docker</h1>
+
+
+
+    <h2>Créer un nouveau conteneur</h2>
+    <form id="create-form">
+        <select name="image" required>
+            <option value="">-- Choisir une image --</option>
+            <option value="nginx">nginx</option>
+            <option value="alpine">alpine</option>
+            <option value="ubuntu">ubuntu</option>
+            <option value="httpd">httpd</option>
+        </select>
+        <input type="text" name="name" placeholder="Nom du conteneur (optionnel)">
+        <button type="submit">Créer et Lancer</button>
+    </form>
+
+    <div id="container-list"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
